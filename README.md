@@ -1,2 +1,2 @@
-# wtg_ifollow
+# WTGdb
 Python toolbox, PostgreSQL+postGIS  scripts 
