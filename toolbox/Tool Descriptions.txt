@@ -1,0 +1,93 @@
+WTG_Tools
+-Summary
+	A suite of tools to quickly filter sets of animal locations.
+	NOTE:
+	1) If you haven't already, you will need to create a new File Geodatabase (GDB) in a suitable local folder.
+	2) You then need to assign it as your "Current Workspace" before using the filter tools. Geoprocessing>Environments>Workspace
+
+	Select Tags
+	-Summary
+		Choose one or more tags from a given cruise.
+
+	-Syntax
+		Species
+		-Explanation
+			Choose a species. 
+			NOTE:
+			The "Cruise" box will only be populated once a choice is made.
+		Cruise
+		-Explanation
+			Choose a cruise (field season)
+			NOTE:
+			All tags deployed as part of this cruise will be in the list of PTT's below, regardless of the "Species" chosen above.
+		PTT list
+		-Explanation
+			Choose one or more PTT's. A new <p_> Feature Class will be created in your Geodatabase, as well as a Feature Layer in your map table of contents (TOC).  	
+
+
+	All Filters 
+	-Summary
+		Filter a <p_> point feature class with multiple filters with a single output.
+		NOTE: Type filtering default selections are "Tag Deployed", "Biopsy Sample" and "Argos Pass". Use caution when you're filtering ADB tags!
+
+
+	Type filter
+	-Summary
+		Choose from available location types. 
+	-Usage
+		NOTE:
+		1) The default selections are "Tag Deployed", "Biopsy Sample" and "Argos Pass". Use caution when you're filtering ADB tags!
+		2) Most "Tag Deployed" locations are also "Biopsy Sample" as they are simultaneous events in the field; If you uncheck "Biopsy Sample" while "Tag Deployed" is checked, ONLY the samples that were collected post-deployment will be filtered.
+	-Syntax
+		Input dataset
+		-Explanation
+			You may use the dropdown to choose a <p_> feature Layer from the map TOC, or use the browse button to choose a feature Class from the GDB.
+		Type box
+		-Explanation		
+			Checked types will be preserved, UN-checked types will be filtered.
+		newFields
+		-Explanation
+			By default, tools will output a new filtered <p_> feature class as well as a <_log> with the locations that were filtered. 
+			Check this box if you prefer to have the filter output include all of the input locations, with filter info appended to new "Filter Name" and "Filter Parameters" columns. 
+			You must type [filtername = 'OK'] into the Definition Query box of the new <p_> Layer before you will see your edits.
+
+		
+	LC filter
+	-Summary
+		Choose the location classes that you want preserve.
+	-Usage
+		NOTE: If you UN-check "GPS" the deployment location will also be filtered. Use the Location Type filter to separate FastLoc GPS from Argos locations instead.
+	-Syntax
+		Input dataset
+		-Explanation
+			You may use the dropdown to choose a <p_> feature Layer from the map TOC, or use the browse button to choose a feature Class from the GDB.
+		Class box
+		-Explanation		
+			Checked LC's will be preserved, UN-checked LC's will be filtered.
+		newFields
+		-Explanation
+			By default, tools will output a new filtered <p_> feature class as well as a <_log> with the locations that were filtered. 
+			Check this box if you prefer to have the filter output include all of the input locations, with filter info appended to new "Filter Name" and "Filter Parameters" columns. 
+			You must type [filtername = 'OK'] into the Definition Query box of the new <p_> Layer before you will see your edits.
+
+	Redundant Filter
+	-Summary
+		Filters all locations with lower-quality LC (0, A, B2, B1) while there is also a higher-quality LC (1, 2, 3) location within the selected minimum time.
+		NOTE:
+		This tool is designed for Argos locations. If there are any FastLoc GPS locations in your input feature class, the results will be unreliable.
+	-Syntax
+		Input dataset
+		-Explanation
+			You may use the dropdown to choose a <p_> feature Layer from the map TOC, or use the browse button to choose a feature Class from the GDB.
+		Min Time
+		-Explanation
+			The time window in minutes that will be be searched for redundant locations.
+
+
+	Speed filter
+	-Summary
+
+
+	Create Track
+	-Summary
+
