@@ -16,6 +16,8 @@ joyn = lambda x: ', '.join(x)
 ##def joyn(x): # shorter join ', '.join()
 ##    y = ', '.join(x)
 ##    return y
+#used only by class wc_behavior, actually just calling parsedate SLOW!!
+from wtg_utils import str2Date
 
 #===============================================================================
 class Encounter(object):
@@ -24,13 +26,8 @@ class Encounter(object):
     # kwargs: row =  {field:value, field:value} DictReader of raw Argos CSV
     def __init__(self, *dev, **row):
         self.tag_id, self.animal_id, self.timevalue, self.feature_type = dev[0:4]
-
-        if self.feature_type=='fastloc':
-            self.latitude = row['Latitude']
-            self.longitude= row['Longitude']
-        elif self.feature_type!='argos':
-            self.latitude = row['latitude']
-            self.longitude= row['longitude']
+        self.latitude = row['lat1']
+        self.longitude= row['lon1']
 
     def sql_param(self):
 
@@ -63,33 +60,36 @@ class Argos(Encounter):
         # Encounter fields
         super(Argos, self).__init__(*dev, **row)
         # Trap Argos fieldname that changed 2013-04-09
-        f_gt = '> - 120 DB' if dev[4] else '&gt; - 120 DB'
+        #f_gt = 'sub120'
         # Translate LC to quality
         dictLC = {'':-9,'Z':-8,'B':-2,'A':-1,'0':0,'1':1,'2':2,'3':3}
         # differentiate B1 and B2
-        if row['Loc. quality']=='B' and row['Msg'] == '1':
-            self.quality = -3
+        #if row['loc_class']=='B' and row['nbmes'] == '1':
+        #    self.quality = -3
+        #else:
+        if row['loc_class']:
+            if row['loc_class'] ==' ':
+                self.quality = -8
+                self.loc_class = 'Z'
+            else:
+                self.quality = dictLC[row['loc_class']]
+                self.loc_class = row['loc_class']
         else:
-            self.quality = dictLC[row['Loc. quality']] if row['Loc. quality'] else -8
+            self.quality = -8
+            self.loc_class = 'Z'
         # Argos fields
-        self.loc_class    = row['Loc. quality'] if row['Loc. quality'] else 'Z'
-        self.passdur      = int(row['Pass']) if row['Pass'] else 0
-        self.satellite    = row['Sat.'] if row['Sat.'] else ''
-        self.frequency    = float(row['Frequency']) if row['Frequency'] else None
-        self.nb_mes       = int(row['Msg']) if row['Msg'] else None
-        self.mes_gt120    = int(row[f_gt]) if row[f_gt] else None
-        self.best_level   = int(row['Best level']) if row['Best level'] else None
-        self.latitude     = float(row['Lat. sol. 1']) if row['Lat. sol. 1'] else None
-        self.longitude    = float(row['Long. 1']) if row['Long. 1'] else None
-        self.lat2         = row['Lat. sol. 2'][:10] if row['Lat. sol. 2'][:10] else None
-        self.lon2         = row['Long. 2'][:10] if row['Long. 2'][:10] else None
-        self.iq           = str(int(row['Loc. idx'].zfill(2))) if row['Loc. idx'] else None
-        self.nopc         = int(row['Nopc']) if row['Nopc'] else None
-        self.error_radius = int(row['Error radius']) if row['Error radius'] else None
-        self.semi_major   = int(row['Semi-major axis'])if row['Semi-major axis'] else None
-        self.semi_minor   = int(row['Semi-minor axis'])if row['Semi-minor axis'] else None
-        self.ellipse      = int(row['Ellipse orientation'])if row['Ellipse orientation'] else None
-        self.gdop         = int(row['GDOP']) if row['GDOP'] else None
+        self.loc_class    = row['loc_class'] if row['loc_class'] else 'Z'
+        #self.passdur      = int(row['pass']) if row['pass'] else 0
+        self.satellite    = row['satellite'] if row['satellite'] else ''
+        self.frequency    = float(row['calculfreq']) if row['calculfreq'] else None
+        self.nb_mes       = int(row['nbmes']) if row['nbmes'] else None
+        self.mes_gt120    = int(row['nbmeslt120']) if row['nbmeslt120'] else None
+        self.best_level   = int(row['bestlevel']) if row['bestlevel'] else None
+        self.latitude     = float(row['lat1']) if row['lat1'] else None
+        self.longitude    = float(row['lon1']) if row['lon1'] else None
+        self.lat2         = row['lat2'][:10] if row['lat2'][:10] else None
+        self.lon2         = row['lon2'][:10] if row['lon2'][:10] else None
+        self.iq           = str(int(row['iq'].zfill(2))) if row['iq'] else 0
 
     def sql_param(self):
         k = sorted(self.__dict__.keys())
@@ -125,17 +125,17 @@ class Argos(Encounter):
 class ArgosTx(object):
     def __init__(self, *feat, **row):
         self.timevalue, self.feature_id = feat
-        self.raw_data = ''
-        # find last column that has data
-        for col in sorted(row.keys()):
-            if col[:6] == "SENSOR":
-                lastCol = int(col[-2:])
-# TRAP: for HEX Data!!
-        # concantenate raw data
-        for i in range(1, lastCol):
-            f_name = 'SENSOR #'+str(i).zfill(2)
-            if row[f_name]:
-                self.raw_data += row[f_name].zfill(3)
+        self.raw_data = row['rawdata']
+##        # find last column that has data
+##        for col in sorted(row.keys()):
+##            if col[:6] == "SENSOR":
+##                lastCol = int(col[-2:])
+### TRAP: for HEX Data!!
+##        # concantenate raw data
+##        for i in range(1, lastCol):
+##            f_name = 'SENSOR #'+str(i).zfill(2)
+##            if row[f_name]:
+##                self.raw_data += row[f_name].zfill(3)
 
     def sql_insert(self):
         k = sorted(self.__dict__.keys())
@@ -228,9 +228,8 @@ class Proxy(Encounter):
         # Encounter fields
         super(Proxy, self).__init__(*dev, **row)
         self.quality = -7
-        self.feature_type = 'proxy'
         # Proxy fields
-        # self.replace_fid = row['original_fid'] if row['original_fid'] else None
+        self.replace_fid = row['original_fid'] if row['original_fid'] else None
         self.source = row['source']
 
     def sql_param(self):
@@ -282,19 +281,18 @@ class Message(object):
         return params
 
 #-------------------------------------------------------------------------------
-class tel_counter(Message):
+class wc_status(Message):
     def __init__(self, *vals, **row):
-        super(tel_counter, self).__init__(*vals)
-        self.transmit_time = row['transmit_time']
-        self.value_time = row['value_time']
-        self.transmit_id = row['transmit_id']
-        self.valid = row['valid']
+        super(wc_status, self).__init__(*vals)
+        self.transmit_time = row['Received']
+        self.value_time = row['RTC'] if row['RTC'] else row['Received']
 
     def sql_insert(self):
-        return super(tel_counter, self).sql_insert()
+        return super(wc_status, self).sql_insert()
 
     def param_dict(self):
-        return super(tel_counter, self).param_dict()
+        return super(wc_status, self).param_dict()
+
 #-------------------------------------------------------------------------------
 class tel_status(Message):
     def __init__(self, *vals, **row):
@@ -309,37 +307,14 @@ class tel_status(Message):
         return super(tel_status, self).param_dict()
 
 #-------------------------------------------------------------------------------
-class tel_dives(Message):
-    def __init__(self, *vals, **row):
-        super(tel_dives, self).__init__(*vals)
-        self.transmit_time = row['Receive Time']
-        self.value_time    = row['Dive Start Time']
-# Duplicated? self.duration = row['Dive Duration']
-
-    def sql_insert(self):
-        return super(tel_dives, self).sql_insert()
-
-    def param_dict(self):
-        return super(tel_dives, self).param_dict()
-
-#-------------------------------------------------------------------------------
-class wc_status(Message):
-    def __init__(self, *vals, **row):
-        super(wc_status, self).__init__(*vals)
-        self.transmit_time = row['Received']
-        self.value_time = row['RTC'] if row['RTC'] else row['Received']
-
-    def sql_insert(self):
-        return super(wc_status, self).sql_insert()
-
-    def param_dict(self):
-        return super(wc_status, self).param_dict()
-
-#-------------------------------------------------------------------------------
 class wc_behavior(Message):
     def __init__(self, *vals, **row):
         super(wc_behavior, self).__init__(*vals)
         self.value_time = row['Start']
+        if row['End']:
+# **************** get rid of str2Date!
+            delta = str2Date(row['End']) - str2Date(row['Start'])
+            self.duration = delta.seconds/60.0
 
     def sql_insert(self):
         return super(wc_behavior, self).sql_insert()
@@ -348,12 +323,24 @@ class wc_behavior(Message):
         return super(wc_behavior, self).param_dict()
 
 #-------------------------------------------------------------------------------
+class tel_dives(Message):
+    def __init__(self, *vals, **row):
+        super(tel_dives, self).__init__(*vals)
+        self.value_time = row['Dive Start Time']
+        self.duration = row['Dive Duration']
+
+    def sql_insert(self):
+        return super(tel_dives, self).sql_insert()
+
+    def param_dict(self):
+        return super(tel_dives, self).param_dict()
+
+#-------------------------------------------------------------------------------
 class wc_histos(Message):
     def __init__(self, *vals, **row):
         super(wc_histos, self).__init__(*vals)
         self.value_time = row['Date']
-# ******** default to 6 hours (for now) ********************************
-        self.duration = 3600
+        self.duration = 3600            # ** default to 6 hours (for now)
 
     def sql_insert(self):
         return super(wc_histos, self).sql_insert()
